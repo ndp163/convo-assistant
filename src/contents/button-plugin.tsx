@@ -4,15 +4,15 @@ import type {
   PlasmoGetInlineAnchorList,
   PlasmoGetShadowHostId
 } from 'plasmo';
+import { useRef, useState } from 'react';
 
 import { usePort } from '@plasmohq/messaging/hook';
 
 import {
   OPEN_THREAD_MODAL,
-  type ThreadMessage,
+  type ThreadMessage
 } from '../background/ports/open-thread-modal';
 import { REGEX_PATTERNS } from '../constants';
-import { useState } from 'react';
 
 export const config: PlasmoCSConfig = {
   matches: ['https://www.chatwork.com/*'],
@@ -41,7 +41,7 @@ export const getShadowHostId: PlasmoGetShadowHostId = ({ element }) => {
 
 const ButtonPlugin = ({ anchor }) => {
   const openConversationModalPort = usePort(OPEN_THREAD_MODAL);
-  const [messages, setMessages] = useState([]);
+  const messagesRef = useRef([]);
 
   const extractAccessToken = () => {
     let content = '';
@@ -95,10 +95,10 @@ const ButtonPlugin = ({ anchor }) => {
   };
 
   const fetchMessage = async (messageId) => {
-    console.log(messages.length);
+    console.log(messagesRef.current.length);
     const accessToken = extractAccessToken();
     const roomId = extractRoomId();
-    let message = messages.find(m => m.id === messageId);
+    let message = messagesRef.current.find((m) => m.id === messageId);
     if (!message) {
       const res = await fetch(
         `https://www.chatwork.com/gateway/jump_message.php?myid=6497550&_v=1.80a&_av=5&ln=en&room_id=${roomId}&message_id=${messageId}&bookmark=1&file=1`,
@@ -125,9 +125,15 @@ const ButtonPlugin = ({ anchor }) => {
         }
       );
       const data = await res.json();
-      const existingMessage = (message) => messages.some(m => m.id === message.id);
-      const newMessages = data.result.chat_list.filter((m => !existingMessage(m)));
-      setMessages([...messages, ...newMessages].sort((m1, m2) => m1.tm - m2.tm));
+      const existingMessage = (message) =>
+        messagesRef.current.some((m) => m.id === message.id);
+      const newMessages = data.result.chat_list.filter(
+        (m) => !existingMessage(m)
+      );
+      messagesRef.current = [...messagesRef.current, ...newMessages].sort(
+        (m1, m2) => m1.tm - m2.tm
+      );
+
       message = data.result.chat_list.find((m) => m.id === messageId);
     }
 
@@ -143,9 +149,7 @@ const ButtonPlugin = ({ anchor }) => {
     const messageId = anchor.element.parentElement.getAttribute('data-mid');
 
     const message = await fetchMessage(messageId);
-    console.log("message")
     const profile = await fetchProfile(message.aid);
-    console.log("profile")
 
     const payload: ThreadMessage[] = [];
     payload.push({

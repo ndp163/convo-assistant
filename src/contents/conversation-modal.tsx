@@ -27,6 +27,7 @@ export const getOverlayAnchor: PlasmoGetOverlayAnchor = async () =>
 
 const ConversationModal = () => {
   const [show, setShow] = useState(false);
+  const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const openConversationModalPort = usePort(OPEN_THREAD_MODAL);
 
   const renderWithLineBreaks = (text) => {
@@ -83,6 +84,7 @@ const ConversationModal = () => {
         return;
       }
       setShow(true);
+      setMessages(payload);
     });
   }, []);
   return (
